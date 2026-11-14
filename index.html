@@ -248,7 +248,7 @@ body{background:#f5f5f7;color:#171717;font-family:-apple-system,BlinkMacSystemFo
 .masthead,.intro,.route-strip,.map-label,.map-caption{display:none!important}
 .workspace{display:flex;flex-direction:column;margin:0;padding:0;max-width:none;border:0;border-radius:0;background:transparent;overflow:visible;min-height:0}
 .planner{display:contents}.map-pane{order:0;position:sticky;top:0;height:var(--map-height);min-height:0;width:100%;border:0;border-radius:0;z-index:100;background:#e6e8e8}
-#map{height:100%;min-height:0;position:absolute;inset:0}.leaflet-tile-pane{filter:grayscale(1) brightness(1.06)}
+#map{height:100%;min-height:0;position:absolute;inset:0}.leaflet-tile-pane{filter:none}
 .map-fallback{background:#eceeef}.map-fallback svg{height:90%;width:auto;max-width:95%;max-height:none;filter:grayscale(1)}.map-fallback p{display:none}
 .tabs{order:1;position:sticky;top:var(--map-height);z-index:101;width:100%;padding:14px 18px;gap:9px;background:rgba(255,255,255,.97);border:0;border-bottom:1px solid #ececef;backdrop-filter:blur(16px)}
 .tab{flex-shrink:0;border-radius:999px;background:#f2f2f5;color:#65656b;font-size:15px;font-weight:500;min-height:43px;padding:10px 21px;line-height:1.4}
@@ -262,7 +262,14 @@ body{background:#f5f5f7;color:#171717;font-family:-apple-system,BlinkMacSystemFo
 @media(max-width:450px){.tab{padding:9px 17px;font-size:14px;min-height:41px}.tabs{padding:12px 14px;gap:8px}.panel{padding:18px 14px 28px}.day-preview{padding:20px 17px}.day-preview b{font-size:16px;gap:9px}.day-preview small{font-size:14px}.foot{padding-left:14px;padding-right:14px}.panel h2{font-size:21px}}
 @media print{.map-pane,.tabs,.actions,.check{display:none!important}.workspace{display:block}.panel{width:100%;max-width:none}.day-preview{box-shadow:none;border:1px solid #ddd}.foot{padding-top:15px}}
 </style>
-</head>
+<style id="collapsing-color-map">
+:root{--expanded-map-height:44vh;--map-height:var(--expanded-map-height)}
+.workspace{padding-top:var(--expanded-map-height)!important;overflow-anchor:none}
+.map-pane{position:fixed!important;top:0;left:0;right:0;height:var(--map-height);z-index:100}
+.tabs{top:var(--map-height);overflow-anchor:none}
+@media(min-width:851px){:root{--expanded-map-height:46vh;--map-height:var(--expanded-map-height)}}
+@media print{.workspace{padding-top:0!important}}
+</style></head>
 
 <body>
 <header class="masthead"><div class="brand"><span class="brand-mark" aria-hidden="true">南</span>一路向南 <span style="font-size:10px;font-weight:400;letter-spacing:2px;color:#8e9987">TRAVEL NOTES</span></div><div class="mast-meta">GUANGZHOU · MACAO · ZHUHAI · SHUNDE</div><span class="status">行程初稿 · 可继续完善</span></header>
@@ -289,5 +296,28 @@ function showDay(id){document.getElementById('mapTitle').textContent=id?DAYS.fin
 document.getElementById('tabs').innerHTML=[{id:0,label:'总览'},...DAYS.map(d=>({id:d.id,label:'D'+d.id+' '+['广州','澳门','珠海·顺德','顺德·广州','返程'][d.id-1]}))].map(d=>`<button class="tab ${d.id===0?'active':''}" data-tab="${d.id}">${d.label}</button>`).join('');
 document.addEventListener('click',e=>{const tab=e.target.closest('[data-tab],[data-day]');if(tab){go(+(tab.dataset.tab??tab.dataset.day));return}const chk=e.target.closest('[data-check]');if(chk){const k=chk.dataset.check;visited[k]=!visited[k];try{localStorage.setItem('lingnan-2026-visited',JSON.stringify(visited))}catch(e){}const article=chk.closest('.stop');article.classList.toggle('done',visited[k]);chk.setAttribute('aria-pressed',String(visited[k]));chk.setAttribute('aria-label',visited[k]?'标记为未去':'标记为已去');chk.textContent=visited[k]?'✓':'○';return}const locate=e.target.closest('[data-locate]');if(locate){const i=+locate.dataset.locate,m=selectedMarker.get(i);if(m){map.setView(m.getLatLng(),15);m.openPopup()}document.querySelector('.map-pane').scrollIntoView({behavior:'smooth',block:'start'});return}if(e.target.closest('#backToMap'))document.querySelector('.map-pane').scrollIntoView({behavior:'smooth',block:'start'})});
 const hash=location.hash.match(/^#day-([1-5])$/);go(hash?+hash[1]:0,true);initMap();
+
+// Keep the expanded map space in document flow to avoid scroll feedback.
+const rootStyle=document.documentElement.style;
+let scrollFrame=0,lastMapHeight=-1,expandedMapHeight=0,minimumMapHeight=0;
+function resizeMapForScroll(){
+  scrollFrame=0;
+  const nextHeight=Math.round(Math.max(minimumMapHeight,expandedMapHeight-Math.max(0,window.scrollY)*0.72));
+  if(nextHeight===lastMapHeight)return;
+  lastMapHeight=nextHeight;
+  rootStyle.setProperty('--map-height',nextHeight+'px');
+  if(map)map.invalidateSize({animate:false,pan:true,debounceMoveend:true});
+}
+function queueMapResize(){if(!scrollFrame)scrollFrame=requestAnimationFrame(resizeMapForScroll)}
+function measureMapHeights(){
+  const viewportHeight=window.innerHeight;
+  expandedMapHeight=Math.round(viewportHeight*(window.innerWidth>850?0.46:0.44));
+  minimumMapHeight=Math.min(expandedMapHeight,window.innerWidth>850?150:125);
+  rootStyle.setProperty('--expanded-map-height',expandedMapHeight+'px');
+  queueMapResize();
+}
+window.addEventListener('scroll',queueMapResize,{passive:true});
+window.addEventListener('resize',measureMapHeights,{passive:true});
+measureMapHeights();
 </script>
 </body></html>
