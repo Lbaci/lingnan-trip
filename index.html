@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岭南五日 · 一路向南</title>
+<meta name="description" content="广州、澳门、珠海、顺德，三个人的五天慢旅行。2026.11.18—11.22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   Design System — edit :root to change theme
+   ═══════════════════════════════════════════ */
+:root {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f5f5f7;
+  --bg-tertiary:   #fbfbfd;
+  --bg-grouped:    #f2f2f7;
+  --bg-elevated:   #ffffff;
+  --text-primary:   #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary:  #aeaeb2;
+  --accent:        #0071e3;
+  --accent-hover:  #0077ed;
+  --tint-red:    #ff3b30;
+  --tint-orange: #ff9500;
+  --tint-green:  #34c759;
+  --tint-blue:   #007aff;
+  --tint-purple: #af52de;
+  --tint-pink:   #ff2d55;
+  --separator:  rgba(60, 60, 67, .12);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:  0 4px 14px rgba(0,0,0,.08);
+  --shadow-lg:  0 8px 30px rgba(0,0,0,.12);
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Helvetica Neue", "Arial", sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.47059;
+  letter-spacing: -0.022em;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Map ── */
+#map { width: 100%; height: 40vh; min-height: 280px; position: sticky; top: 0; z-index: 100; }
+.locate-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+  border: none; box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.locate-btn.active { color: #007aff; }
+@keyframes loc-pulse {
+  0%   { transform: scale(1); opacity: .55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.loc-pulse {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(0,122,255,.25);
+  animation: loc-pulse 1.6s ease-out infinite;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 6px; padding: 12px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  background: rgba(255,255,255,.85); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px); position: sticky; top: 40vh; z-index: 99;
+  border-bottom: .5px solid var(--separator); scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex-shrink: 0; padding: 7px 16px; border-radius: 980px; border: none;
+  background: var(--bg-grouped); color: var(--text-secondary);
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all .25s ease;
+  white-space: nowrap; letter-spacing: -0.01em;
+}
+.tab:active { transform: scale(.96); }
+.tab.active { background: var(--accent); color: #fff; }
+
+/* ── Main content ── */
+.content { max-width: 680px; margin: 0 auto; padding: 16px 16px calc(24px + var(--safe-bottom)); }
+
+/* ── Overview ── */
+.hero { text-align: center; padding: 28px 20px 20px; }
+.hero h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+.hero .subtitle { font-size: 17px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.info-card { background: var(--bg-elevated); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); }
+.info-card .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; margin-bottom: 6px; }
+.info-card .value { font-size: 15px; font-weight: 600; line-height: 1.4; }
+
+/* ── Section headers ── */
+.section-head { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; padding: 20px 0 8px; }
+
+/* ── Day header ── */
+.day-head { padding: 20px 0 12px; }
+.day-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.day-head p { font-size: 15px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Route bar ── */
+.route-bar { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--text-secondary); line-height: 1.7; white-space: pre-line; }
+.route-bar strong { color: var(--text-primary); }
+
+/* ── Timeline ── */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 20px; bottom: 20px; width: 1.5px; background: var(--separator); }
+.tl-item { position: relative; margin-bottom: 10px; }
+.tl-dot { position: absolute; left: -20px; top: 18px; width: 10px; height: 10px; border-radius: 50%; z-index: 1; box-shadow: 0 0 0 3px var(--bg-secondary); }
+.tl-dot.food    { background: var(--tint-red); }
+.tl-dot.spot    { background: var(--tint-blue); }
+.tl-dot.hotel   { background: var(--tint-orange); }
+.tl-dot.drink   { background: var(--tint-purple); }
+.tl-dot.transport { background: var(--text-tertiary); }
+
+/* ── Card ── */
+.card { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-sm); transition: box-shadow .25s ease; cursor: pointer; }
+.card:active { box-shadow: var(--shadow-md); }
+.card .time { font-size: 12px; font-weight: 600; color: var(--text-tertiary); letter-spacing: .01em; }
+.card .name { font-size: 17px; font-weight: 600; margin: 2px 0 4px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px; }
+.card .desc { font-size: 14px; color: var(--text-secondary); line-height: 1.45; }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; }
+.badge.food   { background: rgba(255,59,48,.1);  color: var(--tint-red); }
+.badge.spot   { background: rgba(0,122,255,.1);  color: var(--tint-blue); }
+.badge.drink  { background: rgba(175,82,222,.1); color: var(--tint-purple); }
+
+/* Budget */
+.budget { display: inline-block; margin-top: 6px; padding: 3px 10px; background: var(--bg-grouped); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+/* Payment */
+.pays { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.pay { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.pay.ok  { background: rgba(52,199,89,.1);  color: var(--tint-green); }
+.pay.no  { background: rgba(255,59,48,.08); color: var(--tint-red); }
+.pay.idk { background: rgba(255,149,0,.1);  color: var(--tint-orange); }
+
+/* Links row */
+.links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  text-decoration: none !important; transition: filter .2s;
+}
+.btn:active { filter: brightness(.9); }
+.btn.nav    { background: var(--accent); color: #fff; }
+.btn.xhs    { background: #ff2442; color: #fff; }
+.btn.dp     { background: #ffa700; color: #fff; }
+.btn.rsv    { background: var(--tint-green); color: #fff; }
+
+/* Action Sheet */
+.as-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.as-overlay.show { opacity: 1; pointer-events: auto; }
+.as-sheet {
+  width: 100%; max-width: 420px;
+  padding: 0 8px 34px;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.22,1,.36,1);
+}
+.as-overlay.show .as-sheet { transform: translateY(0); }
+.as-group {
+  background: rgba(255,255,255,.88); backdrop-filter: blur(20px);
+  border-radius: 14px; overflow: hidden; margin-bottom: 8px;
+}
+.as-group .as-item {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px; font-size: 18px; color: #007aff; font-weight: 500;
+  border: none; background: none; width: 100%; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.as-group .as-item + .as-item { border-top: .5px solid rgba(0,0,0,.12); }
+.as-group .as-item:active { background: rgba(0,0,0,.06); }
+.as-cancel { font-weight: 600; }
+
+/* Details — default open */
+.details {
+  margin-top: 10px; padding-top: 10px;
+  border-top: .5px solid var(--separator);
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+.details.closed { display: none; }
+
+/* ── Overview day list ── */
+.day-list .card { margin-bottom: 8px; }
+.day-list .card .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+/* ── Payment summary ── */
+.pay-summary { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-sm); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
+.pay-summary h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.pay-summary .warn { color: var(--tint-red); }
+.pay-summary .ok-text { color: var(--tint-green); }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 0; font-size: 12px; color: var(--text-secondary); }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Leaflet overrides ── */
+.leaflet-popup-content-wrapper { border-radius: var(--radius-md) !important; box-shadow: var(--shadow-lg) !important; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif !important; }
+.leaflet-popup-content { font-size: 14px !important; line-height: 1.5 !important; margin: 12px 14px !important; }
+.leaflet-popup-content a { color: var(--accent) !important; }
+.leaflet-popup-tip { background: #fff !important; }
+.leaflet-control-zoom a { width: 34px !important; height: 34px !important; line-height: 34px !important; font-size: 16px !important; border-radius: 10px !important; background: rgba(255,255,255,.85) !important; -webkit-backdrop-filter: blur(10px) !important; backdrop-filter: blur(10px) !important; border: .5px solid var(--separator) !important; color: var(--text-primary) !important; }
+.leaflet-control-zoom { border-radius: 12px !important; overflow: hidden; box-shadow: var(--shadow-md) !important; border: none !important; }
+.leaflet-control-attribution { font-size: 9px !important; opacity: .5; }
+</style>
+
+<style>
+:root{--accent:#287862;--bg-secondary:#f6f5f0;--text-primary:#243c32;--text-secondary:#727e74;--separator:#dfe4db}
+body{background:#f6f5f0;color:#243c32;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;letter-spacing:0}
+button,a{-webkit-tap-highlight-color:transparent}button{font:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #c08c49;outline-offset:3px}
+.masthead{height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 4vw;border-bottom:1px solid #dfe4db;background:#fafaf6}.brand{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:700;letter-spacing:2px}.brand-mark{border:1px solid #728e79;border-radius:50%;width:34px;height:34px;display:grid;place-items:center;color:#287862}.mast-meta{font-size:12px;color:#727e74;letter-spacing:1px}.status{border:1px solid #d8dfd1;border-radius:30px;padding:7px 12px;font-size:11px;color:#627262}
+.intro{padding:43px 4vw 30px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}.eyebrow{font-size:10px;letter-spacing:3px;color:#287862;font-weight:700;margin-bottom:13px}.intro h1{font-family:Georgia,"Songti SC","SimSun",serif;font-size:clamp(34px,4vw,56px);font-weight:500;letter-spacing:1px;line-height:1.2}.intro p{margin-top:14px;font-size:13px;color:#727e74;line-height:1.8}.trip-meta{display:flex;gap:24px;align-items:center;padding-bottom:5px}.trip-meta b{display:block;font-size:22px;font-weight:500}.trip-meta small{font-size:10px;letter-spacing:2px;color:#727e74}.route-strip{display:flex;gap:10px;align-items:center;margin:0 4vw 25px;font-size:12px;color:#65776a}.route-strip span{padding:6px 12px;border:1px solid #dde4d8;border-radius:6px}.route-strip i{font-style:normal;color:#9ba696}
+.workspace{margin:0 4vw 36px;display:grid;grid-template-columns:minmax(0,1.03fr) minmax(0,1fr);border:1px solid #dce2d7;border-radius:18px;overflow:hidden;background:#fff;min-height:650px}.planner{min-width:0}.tabs{position:relative;top:auto;padding:15px 19px;gap:5px;background:#fff;border-bottom:1px solid #e5e9e1;z-index:2}.tab{border-radius:7px;font-size:12px;padding:9px 13px;background:transparent;color:#7e897d;min-height:38px}.tab.active{background:#287862}.panel{padding:26px 25px;max-height:720px;overflow:auto;scrollbar-width:thin;scrollbar-color:#cdd7c9 transparent}.panel-head{display:flex;justify-content:space-between;align-items:start;gap:10px}.overline{font-size:10px;font-weight:600;letter-spacing:2px;color:#8a9886;margin-bottom:9px}.panel h2{font-family:Georgia,"Songti SC","SimSun",serif;font-size:25px;font-weight:500;line-height:1.4}.panel .lead{font-size:12px;color:#7d887b;line-height:1.9;margin:12px 0 19px}.section-label{font-size:10px;letter-spacing:2px;color:#8d9787;margin:21px 0 12px}.day-preview{width:100%;background:#fff;text-align:left;border:1px solid #e6e9e1;border-radius:11px;padding:16px;margin-bottom:9px;display:grid;grid-template-columns:45px 1fr 20px;gap:10px;align-items:center;transition:background .2s}.day-preview:hover{background:#f5f8f2}.day-no{font-family:Georgia,serif;font-size:23px;color:var(--day)}.day-preview b{font-size:13px;font-weight:600;display:block}.day-preview small{font-size:11px;color:#91988d;display:block;margin-top:5px}.arrow{color:#8a9984}.note{background:#f3f6ef;border-radius:9px;padding:13px 15px;font-size:12px;line-height:1.9;color:#61715e;margin-top:12px}.note strong{color:#2e523d}.pending{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pending div{background:#faf9f5;border:1px dashed #d7ddcf;padding:13px;border-radius:9px}.pending small{font-size:10px;color:#8c9686;display:block;margin-bottom:5px}.pending b{font-size:12px;font-weight:500}.map-pane{border-left:1px solid #dce2d7;position:relative;background:#e8eee3;min-height:650px}.map-label{position:absolute;top:20px;left:20px;z-index:500;background:#fffffff2;padding:10px 14px;border-radius:9px;box-shadow:0 3px 16px #30452910;font-size:11px;max-width:calc(100% - 90px)}.map-label b{display:block;font-size:13px;margin-bottom:3px}.map-label small{font-size:10px;color:#86927d}#map{height:100%;min-height:650px;position:absolute;top:0;z-index:1}.map-caption{position:absolute;bottom:23px;left:18px;right:18px;z-index:500;background:#ffffffed;border:1px solid #dce4d7;border-radius:9px;padding:12px 15px;font-size:11px;color:#75806d;display:flex;align-items:center;gap:9px;pointer-events:none}.dash{width:22px;border-top:2px dashed #5e8868}.map-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#e9efe5;flex-direction:column;color:#73866d;gap:10px;text-align:center;font-size:12px}.map-fallback svg{width:82%;max-height:430px}.map-fallback svg text{font-family:inherit}.map-fallback p{max-width:270px;line-height:1.8}
+.timeline{padding-left:23px}.timeline::before{left:7px;background:#e3e9de}.stop{position:relative;margin-bottom:12px;background:#fff;border:1px solid #e5eadf;border-radius:11px;padding:15px}.stop.focused{border-color:#287862;box-shadow:0 0 0 2px #28786215}.stop::before{content:'';position:absolute;left:-21px;top:24px;width:9px;height:9px;border:2px solid #fff;box-shadow:0 0 0 1px #b8c9ae;border-radius:50%;background:var(--day)}.stop.done{opacity:.57}.stop.done h3{text-decoration:line-through}.stop-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.time{font-size:10px;color:#88937e;letter-spacing:.3px}.pill{font-size:9px;background:#f3eee4;color:#9b793f;border-radius:4px;padding:3px 6px}.stop h3{font-size:14px;font-weight:600;margin:7px 0}.stop p{font-size:12px;line-height:1.8;color:#7a8673}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.action{display:inline-flex;align-items:center;gap:4px;border:1px solid #e2e8da;border-radius:5px;background:#f9fbf6;color:#53774e;padding:6px 9px;font-size:10px;min-height:30px}.action:hover{background:#edf4e7;text-decoration:none}.action.primary{background:#287862;color:#fff;border-color:#287862}.check{width:24px;height:24px;border:1px solid #d2dcc9;border-radius:50%;background:#fff;color:#487844;flex-shrink:0}.check[aria-pressed=true]{background:#e0edda}.stop details{font-size:11px;color:#77846f;line-height:1.8;margin-top:9px}.stop summary{cursor:pointer;color:#657b5d}.optional-head{border:0;background:transparent;color:#7b896f;padding:12px 0;font-size:12px;font-weight:600}.optional{background:#fcfcf8}.transport-box{font-size:11px;line-height:1.9;color:#74816b;border-left:2px solid #c4d0b8;padding:4px 0 4px 12px;margin:17px 0}.foot{margin:0 4vw 30px;display:flex;justify-content:space-between;gap:15px;color:#929b8b;font-size:10px;line-height:1.9}.foot a{color:#728568}.source-links{display:flex;gap:15px;flex-wrap:wrap}.mobile-map{display:none}.number-pin{width:27px;height:27px;border-radius:50%;background:var(--pin);color:#fff;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 2px 8px #30402c40;font-size:11px;font-weight:600}.overview-pin{height:34px;padding:8px 12px;background:#fff;border-radius:20px;box-shadow:0 2px 12px #28402020;font-size:11px;white-space:nowrap;color:#315d40;border:1px solid #bfcdb8}
+@media(min-width:1600px){.workspace,.intro,.route-strip,.masthead,.foot{padding-left:max(4vw,calc((100vw - 1500px)/2));padding-right:max(4vw,calc((100vw - 1500px)/2))}.workspace{padding:0;max-width:1400px;margin-left:auto;margin-right:auto}}
+@media(max-width:850px){.intro{padding-top:28px;grid-template-columns:1fr}.trip-meta{gap:25px}.trip-meta b{font-size:18px}.workspace{grid-template-columns:1fr;margin:0 15px 25px}.map-pane{min-height:340px;border-left:0;border-top:1px solid #dce2d7;grid-row:1}#map{min-height:340px}.panel{max-height:none;padding:22px 18px}.masthead{height:62px;padding:0 20px}.mast-meta{display:none}.intro{padding-left:20px;padding-right:20px}.route-strip{margin-left:20px;margin-right:20px;gap:6px;flex-wrap:wrap}.route-strip span{padding:5px 9px}.tabs{padding:11px 10px;position:sticky;top:0}.tab{padding:9px 11px}.map-caption{font-size:10px;bottom:22px;padding:9px 12px}.foot{margin:0 20px 25px;flex-direction:column}.map-label{top:14px;left:14px}.map-fallback svg{max-height:230px}.map-fallback p{display:none}.mobile-map{display:inline-block}.panel h2{font-size:23px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+@media print{.map-pane,.actions,.check,.tabs,.status{display:none}.workspace{display:block;border:0}.panel{max-height:none}.foot{display:block}.intro{padding-top:0}}
+</style>
+</head>
+
+<body>
+<header class="masthead"><div class="brand"><span class="brand-mark" aria-hidden="true">南</span>一路向南 <span style="font-size:10px;font-weight:400;letter-spacing:2px;color:#8e9987">TRAVEL NOTES</span></div><div class="mast-meta">GUANGZHOU · MACAO · ZHUHAI · SHUNDE</div><span class="status">行程初稿 · 可继续完善</span></header>
+<section class="intro"><div><div class="eyebrow">A LITTLE SOUTHERN ESCAPE / 2026</div><h1>岭南五日，慢慢走。</h1><p>看珠江夜色，穿澳门小巷，吹珠海的风，再去顺德好好吃饭。</p></div><div class="trip-meta"><div><b>11.18 — 11.22</b><small>2026 · 周三至周日</small></div><div><b>3 人</b><small>5 DAYS / 4 NIGHTS</small></div></div></section>
+<div class="route-strip" aria-label="旅行路线"><span>广州</span><i>→</i><span>澳门</span><i>→</i><span>珠海</span><i>→</i><span>顺德</span><i>→</i><span>广州</span></div>
+<main class="workspace"><section class="planner"><nav class="tabs" id="tabs" aria-label="选择行程日期"></nav><div class="panel" id="content" aria-live="polite"></div></section><aside class="map-pane" aria-label="行程地图"><div class="map-fallback" id="mapFallback"><svg viewBox="0 0 420 410" role="img" aria-label="广州、顺德、珠海、澳门相对位置示意"><path d="M0 50Q170 5 270 70T420 30V410H0Z" fill="#e0e8d9"/><path d="M300 0Q235 140 310 240T260 410H420V0" fill="#d5e8e5"/><path d="M195 65L155 155L235 320L220 350" stroke="#6a9877" fill="none" stroke-width="2" stroke-dasharray="6 6"/><g fill="#287862" stroke="white" stroke-width="4"><circle cx="195" cy="65" r="8"/><circle cx="155" cy="155" r="8"/><circle cx="235" cy="320" r="8"/><circle cx="220" cy="350" r="8"/></g><g font-size="14" fill="#3e6347"><text x="211" y="69">广州</text><text x="98" y="159">顺德</text><text x="251" y="324">珠海</text><text x="163" y="359">澳门</text></g></svg><p id="fallbackText">地图正在加载。行程卡片与导航链接可独立使用。</p></div><div id="map"></div><div class="map-label"><b id="mapTitle">五天，一条岭南环线</b><small id="mapSubtitle">点击日期，查看当天地点</small></div><div class="map-caption"><span class="dash"></span>连线仅表示游览顺序，不代表实际步行或行车路线。</div></aside></main>
+<footer class="foot"><div>先有方向，再慢慢完善。酒店、车次、餐厅和预约均待确认。<br>地图点位为近似参考；导航按地点名称搜索。已去标记仅保存在当前浏览器。</div><div class="source-links"><a href="https://www.gdmuseum.org.cn/col843/list" target="_blank" rel="noopener">粤博官方参观信息 ↗</a><a href="https://www.macaotourism.gov.mo/zh-hans/travelessential/before-you-travel/ports-of-entry" target="_blank" rel="noopener">澳门口岸信息 ↗</a><a href="https://www.12306.cn/" target="_blank" rel="noopener">铁路12306 ↗</a></div></footer>
+<script>
+const HOTEL = {name:'待定',lat:0,lng:0};
+const DAYS = [{"id": 1, "city": "广州", "date": "11.18", "week": "周三", "title": "抵达羊城，等一场珠江夜色", "short": "广州 · 珠江夜色", "color": "#287862", "stay": "广州 · 区域待定", "intro": "上午抵达、放下行李。下午再出发，把第一天留给博物馆和江边。", "transit": "广州白云站 → 石潭站（步行换乘）→ 8号线磨碟沙。实际用时按酒店位置重算；打车为备选。", "food": "午餐在酒店附近简单吃；晚餐按花城广场周边就近选择，琶醍作为夜宵备选。", "locations": [{"name": "广州白云站", "lat": 23.2007, "lng": 113.2518, "time": "09:45", "desc": "按你提供的到达时间安排；出站后再前往酒店寄存行李。", "type": "transport", "optional": false, "tag": "到达", "detail": "", "city": "广州", "query": "广州白云站 广州"}, {"name": "广东省博物馆", "lat": 23.1177, "lng": 113.3215, "time": "14:00 后", "desc": "下午主选。逛展后步行到花城广场，不再额外塞远处景点。", "type": "spot", "optional": false, "tag": "需预约", "detail": "正常开放 09:00–17:00，16:00 停止入场；通过官方渠道预约，临时安排以公告为准。", "city": "广州", "query": "广东省博物馆 广州"}, {"name": "花城广场", "lat": 23.1191, "lng": 113.32, "time": "傍晚—晚上", "desc": "在珠江北岸看广州塔与城市灯光，不安排登塔。", "type": "spot", "optional": false, "tag": "夜景", "detail": "", "city": "广州", "query": "花城广场 广州"}, {"name": "琶醍啤酒文化创意艺术区", "lat": 23.1056, "lng": 113.331, "time": "晚间备选", "desc": "有体力、想吃夜宵再去；步行距离需等酒店确定后核算。", "type": "drink", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "琶醍啤酒文化创意艺术区 广州"}, {"name": "广州塔江边", "lat": 23.1065, "lng": 113.3246, "time": "下午替代", "desc": "不去博物馆时改走南岸江边；D5 若再来，可缩短停留。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "广州塔江边 广州"}, {"name": "珠江夜游", "lat": 23.112, "lng": 113.3005, "time": "晚间备选", "desc": "自愿项目，码头、班次和票价后续再定；此点仅代表天字码头参考位置。", "type": "spot", "optional": true, "tag": "付费可选", "detail": "", "city": "广州", "query": "天字码头 广州"}]}, {"id": 2, "city": "澳门", "date": "11.19", "week": "周四", "title": "从老城街巷，走到路氹灯火", "short": "澳门 · 一日漫游", "color": "#a66b3d", "stay": "珠海 · 拱北区域待定", "intro": "先把行李放在珠海，再轻装过关。半岛看老城，下午去氹仔与路氹。", "transit": "磨碟沙 → 18号线南村万博 → 7号线广州南 → 列车到珠海。先寄存行李，再步行赴拱北；车次、票价与门到门时间待核。", "food": "半岛：马庆康南天咖啡室／恒友鱼蛋／成记粥品，按当时位置选一家。官也街：猪扒包、雪糕按胃口选，不全部打卡。", "locations": [{"name": "珠海站", "lat": 22.2185, "lng": 113.5448, "time": "早间", "desc": "购买合适的广州南→珠海车次；抵达后先寄存行李。", "type": "transport", "optional": false, "tag": "车次待定", "detail": "", "city": "珠海", "query": "珠海站 珠海"}, {"name": "拱北口岸", "lat": 22.2168, "lng": 113.5502, "time": "上午过关", "desc": "预留排队与澳门侧交通时间，实际抵达后再决定半岛停留长度。", "type": "transport", "optional": false, "tag": "", "detail": "关闸开放时间 06:00–次日01:00。出发前核验本人通行证及有效签注；自助通关资格按口岸规定。", "city": "珠海", "query": "拱北口岸 珠海"}, {"name": "议事亭前地", "lat": 22.1935, "lng": 113.5398, "time": "上午—中午", "desc": "从老城广场开始，沿街巷慢慢往大三巴方向走。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "澳门", "query": "议事亭前地 澳门"}, {"name": "大三巴牌坊", "lat": 22.1976, "lng": 113.5409, "time": "中午前后", "desc": "与恋爱巷一起走；午餐就近选，不为排队店折返。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "澳门", "query": "大三巴牌坊 澳门"}, {"name": "恋爱巷", "lat": 22.1972, "lng": 113.54, "time": "顺路", "desc": "短暂停留拍照，留出半岛到氹仔的交通时间。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "澳门", "query": "恋爱巷 澳门"}, {"name": "官也街", "lat": 22.1537, "lng": 113.5577, "time": "下午", "desc": "逛吃放在同一片区域，猪扒包、甜品选喜欢的即可。", "type": "food", "optional": false, "tag": "", "detail": "", "city": "澳门", "query": "官也街 澳门"}, {"name": "威尼斯人", "lat": 22.1475, "lng": 113.5597, "time": "下午—傍晚", "desc": "路氹主选。巴黎人、伦敦人以顺路外观为主。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "澳门", "query": "威尼斯人 澳门"}, {"name": "拱北口岸", "lat": 22.2168, "lng": 113.5502, "time": "晚间返回珠海", "desc": "不锁定回程时刻，给路氹回关闸的交通和过关留余量。", "type": "transport", "optional": false, "tag": "", "detail": "", "city": "珠海", "query": "拱北口岸 珠海"}, {"name": "大炮台", "lat": 22.1967, "lng": 113.5422, "time": "半岛备选", "desc": "有体力再爬坡；优先保证下午氹仔时间。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "澳门", "query": "大炮台 澳门"}, {"name": "巴黎人", "lat": 22.1439, "lng": 113.5624, "time": "路氹备选", "desc": "看外观和灯光，不单独安排购物时段。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "澳门", "query": "巴黎人 澳门"}, {"name": "伦敦人", "lat": 22.1462, "lng": 113.565, "time": "路氹备选", "desc": "与威尼斯人择重点，避免三家商场都深逛。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "澳门", "query": "伦敦人 澳门"}, {"name": "青茂口岸", "lat": 22.2149, "lng": 113.5455, "time": "口岸备选", "desc": "24小时开放，仅限符合条件的旅客使用；当天按实时情况选择。", "type": "transport", "optional": true, "tag": "", "detail": "", "city": "澳门", "query": "青茂口岸 澳门"}]}, {"id": 3, "city": "珠海 → 顺德", "date": "11.20", "week": "周五", "title": "沿海走一段，再去顺德吃晚饭", "short": "珠海 → 顺德", "color": "#397a92", "stay": "顺德 · 大良区域待定", "intro": "情侣路的海风是今天主角。下午留足取行李和进站时间，晚饭交给顺德。", "transit": "爱情邮局 → 珠海渔女 → 香炉湾 → 日月贝，按体力步行与打车结合。约16:30是离开游览区的目标，不是已订车次；回珠海站取行李后乘车赴顺德。", "food": "午餐在吉大附近选择；顺德晚饭在大良、华盖路周边找正餐，双皮奶、伦教糕作为加餐。", "locations": [{"name": "爱情邮局灯塔", "lat": 22.2544, "lng": 113.5903, "time": "上午", "desc": "睡醒、退房寄存后出发，先看灯塔和海。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "珠海", "query": "爱情邮局灯塔 珠海"}, {"name": "珠海渔女", "lat": 22.2663, "lng": 113.5929, "time": "上午—中午", "desc": "沿情侣路向北；路程累了直接打车，不预设共享电动车一定可用。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "珠海", "query": "珠海渔女 珠海"}, {"name": "香炉湾沙滩", "lat": 22.2742, "lng": 113.5876, "time": "中午前后", "desc": "天气好就多坐一会，午餐按当前位置选。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "珠海", "query": "香炉湾沙滩 珠海"}, {"name": "日月贝 · 珠海大剧院", "lat": 22.2893, "lng": 113.5891, "time": "下午", "desc": "野狸岛和剧院外观合并游览；不安排演出。", "type": "spot", "optional": false, "tag": "", "detail": "临海风大或下雨时缩短停留，直接回酒店取行李。", "city": "珠海", "query": "珠海大剧院 珠海"}, {"name": "珠海站", "lat": 22.2185, "lng": 113.5448, "time": "约16:30 起返站", "desc": "从游览区回站、取行李和候车都计入交通时间；实际发车以购票结果为准。", "type": "transport", "optional": false, "tag": "车次待定", "detail": "", "city": "珠海", "query": "珠海站 珠海"}, {"name": "华盖路步行街", "lat": 22.8397, "lng": 113.2519, "time": "顺德晚间", "desc": "入住后在附近吃晚饭、散步；餐厅分店待选。", "type": "food", "optional": false, "tag": "", "detail": "你提供的候选：猪肉婆、煲仔饭、细妹牛杂／牛腩、双皮奶。暂不承诺营业时间及排队情况。", "city": "佛山顺德", "query": "华盖路步行街 佛山顺德"}, {"name": "景山公园", "lat": 22.2664, "lng": 113.5803, "time": "时间充裕再选", "desc": "先保证珠海海边主线和赴顺德交通；索道、滑道为额外付费项目。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "珠海", "query": "景山公园 珠海"}]}, {"id": 4, "city": "顺德 → 广州", "date": "11.21", "week": "周六", "title": "一顿早茶，半日西关", "short": "顺德 → 广州西关", "color": "#997044", "stay": "广州 · 区域待定", "intro": "慢慢吃早茶，中午回广州。下午只抓住陈家祠与永庆坊，其他老城地点灵活加。", "transit": "顺德住宿 → 合适的铁路／地铁方案回广州 → 酒店放行李 → 陈家祠 → 永庆坊。入住区域确定后再选择到达站与换乘路线。", "food": "顺德早茶可点陈村粉、伦教糕。广州晚餐选永庆坊、西关周边；鱼皮、肠粉、云吞面按胃口选。", "locations": [{"name": "大良早茶 · 区域参考", "lat": 22.8397, "lng": 113.2519, "time": "上午", "desc": "睡醒后吃早茶，具体餐厅待选；此处标记华盖路附近区域。", "type": "food", "optional": false, "tag": "餐厅待选", "detail": "", "city": "佛山顺德", "query": "华盖路步行街 佛山顺德"}, {"name": "广州南站", "lat": 22.9896, "lng": 113.269, "time": "中午前后", "desc": "暂作回广州的交通参考点，方案与车次后续确认。", "type": "transport", "optional": false, "tag": "方案待定", "detail": "", "city": "佛山顺德", "query": "广州南站 佛山顺德"}, {"name": "陈家祠", "lat": 23.129, "lng": 113.24, "time": "下午", "desc": "当天第一站；购票与开放时间出发前再核验。", "type": "spot", "optional": false, "tag": "门票待核", "detail": "", "city": "广州", "query": "陈家祠 广州"}, {"name": "永庆坊", "lat": 23.1134, "lng": 113.2316, "time": "下午—傍晚", "desc": "西关街巷慢逛，粤剧艺术博物馆顺路、按开放情况进入。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "广州", "query": "永庆坊 广州"}, {"name": "粤剧艺术博物馆", "lat": 23.1121, "lng": 113.2315, "time": "顺路参观", "desc": "就在永庆坊一带；是否入馆待预约与开放信息确认。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "广州", "query": "粤剧艺术博物馆 广州"}, {"name": "沙面岛", "lat": 23.1083, "lng": 113.2385, "time": "晚间备选", "desc": "与北京路二选一，不把所有老城地点串成赶路清单。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "沙面岛 广州"}, {"name": "北京路步行街", "lat": 23.1182, "lng": 113.269, "time": "晚间备选", "desc": "若想热闹和吃夜宵，可以替代沙面。", "type": "food", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "北京路步行街 广州"}, {"name": "石室圣心大教堂", "lat": 23.1105, "lng": 113.2545, "time": "顺路备选", "desc": "仅顺路远观，不为此折返或压缩主线。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "石室圣心大教堂 广州"}, {"name": "东山口", "lat": 23.1243, "lng": 113.2953, "time": "替代方案", "desc": "更想逛小店时，可替代当晚沙面／北京路。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "广州", "query": "东山口 广州"}, {"name": "逢简水乡", "lat": 22.8363, "lng": 113.1583, "time": "顺德替代方案", "desc": "若坚持上午去水乡，下午广州应只保留永庆坊，不与完整西关行程叠加。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "佛山顺德", "query": "逢简水乡 佛山顺德"}, {"name": "顺德欢乐海岸 PLUS", "lat": 22.805, "lng": 113.2937, "time": "顺德替代方案", "desc": "与逢简水乡二选一；选择这里也需压缩广州下午安排。", "type": "spot", "optional": true, "tag": "", "detail": "", "city": "佛山顺德", "query": "顺德欢乐海岸 PLUS 佛山顺德"}]}, {"id": 5, "city": "广州", "date": "11.22", "week": "周日", "title": "再看一眼江边，从容返程", "short": "广州 · 江边与返程", "color": "#687b58", "stay": "返程 · 车次待定", "intro": "最后一天留白。先看返程车次，再决定是否保留江边散步与有轨电车。", "transit": "酒店 → 江边（时间允许）→ 酒店取行李 → 广州白云站。预留完整路程、石潭步行换乘及进站安检时间；车站须按最终车票核对。", "food": "午餐在酒店或取行李路线附近解决，不安排需要排长队的店。", "locations": [{"name": "广州塔有轨电车站", "lat": 23.1064, "lng": 113.3263, "time": "上午 · 时间允许", "desc": "坐一段海珠有轨电车看江景；具体上下车站可随酒店位置调整。", "type": "transport", "optional": false, "tag": "弹性安排", "detail": "", "city": "广州", "query": "广州塔有轨电车站 广州"}, {"name": "广州塔江边", "lat": 23.1065, "lng": 113.3246, "time": "上午 · 顺路", "desc": "轻松散步，和D1如果重复，可缩短或取消。", "type": "spot", "optional": false, "tag": "", "detail": "", "city": "广州", "query": "广州塔江边 广州"}, {"name": "广州白云站", "lat": 23.2007, "lng": 113.2518, "time": "按车次倒推", "desc": "先回酒店取行李再赴车站；如买到较早班次，当天只留早餐与返程。", "type": "transport", "optional": false, "tag": "返程待定", "detail": "", "city": "广州", "query": "广州白云站 广州"}]}];
+let current = 0, map = null, layers = [], selectedMarker = new Map();
+let visited = {};
+try {visited=JSON.parse(localStorage.getItem('lingnan-2026-visited')||'{}')}catch(e){}
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key = (d,i) => d+'-'+i;
+function navUrl(l,city){return 'https://uri.amap.com/search?keyword='+encodeURIComponent(l.query)+'&view=map&src=lingnantrip&callnative=1'}
+function card(l,d,i){const k=key(d.id,i),done=!!visited[k];return `<article class="stop ${l.optional?'optional':''} ${done?'done':''}" style="--day:${d.color}" id="stop-${k}"><div class="stop-top"><span class="time">${esc(l.time)}</span>${l.tag?`<span class="pill">${esc(l.tag)}</span>`:''}<button class="check" data-check="${k}" aria-pressed="${done}" aria-label="标记${esc(l.name)}为${done?'未去':'已去'}">${done?'✓':'○'}</button></div><h3>${esc(l.name)}</h3><p>${esc(l.desc)}</p>${l.detail?`<details><summary>查看提醒</summary>${esc(l.detail)}</details>`:''}<div class="actions"><button class="action" data-locate="${i}">地图定位 ↗</button><a class="action primary" href="${navUrl(l,d.city)}" target="_blank" rel="noopener">高德导航 ↗</a><a class="action" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.query)}" target="_blank" rel="noopener">Google Maps ↗</a>${l.type==='food'||l.type==='drink'?`<a class="action" href="https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(l.name+' 美食')}" target="_blank" rel="noopener">小红书搜索 ↗</a>`:''}</div></article>`}
+function overviewContent(){return `<div class="overline">YOUR FIVE-DAY JOURNEY</div><h2>一份不赶路的旅行草稿</h2><p class="lead">以你提供的行程为底稿，保留五天主线。主选先走，备选随天气、体力和胃口决定。</p>${DAYS.map(d=>`<button class="day-preview" data-day="${d.id}" style="--day:${d.color}"><span class="day-no">0${d.id}</span><span><b>${esc(d.short)}</b><small>${d.date} ${d.week} · ${esc(d.stay)}</small></span><span class="arrow">↗</span></button>`).join('')}<div class="section-label">留待完善 / TO BE DECIDED</div><div class="pending"><div><small>住宿</small><b>酒店暂不选定</b></div><div><small>返程</small><b>11.22 车次待定</b></div><div><small>城际交通</small><b>班次、票价待核</b></div><div><small>餐饮与预约</small><b>按最终路线补充</b></div></div><div class="note"><strong>行李怎么走？</strong><br>D2 先在珠海寄存再过澳门；D3 游玩后取行李再赴顺德；D4 回广州先放行李再逛老城。</div><div class="note"><strong>D4 做减法。</strong>默认保留顺德早茶 + 广州西关。水乡、欢乐海岸与更多老城地点放在当天备选里，不要求全部完成。</div>`}
+function renderDay(d){const main=d.locations.map((l,i)=>({l,i})).filter(x=>!x.l.optional),alt=d.locations.map((l,i)=>({l,i})).filter(x=>x.l.optional);return `<div class="overline">DAY 0${d.id} / ${d.date} ${d.week}</div><div class="panel-head"><h2>${esc(d.title)}</h2><button class="action mobile-map" id="backToMap">看地图 ↑</button></div><p class="lead">${esc(d.intro)}</p><div class="transport-box">${esc(d.transit)}</div><div class="section-label">当天主线 / ${main.length} 个地点</div><div class="timeline">${main.map(x=>card(x.l,d,x.i)).join('')}</div><div class="note"><strong>吃饭方向</strong><br>${esc(d.food)}<br><small>餐厅为你提供的候选，尚未做点评及营业核验。</small></div>${alt.length?`<details class="optional-list"><summary class="optional-head">＋ 备选与替代方案 · ${alt.length} 项</summary><div class="timeline">${alt.map(x=>card(x.l,d,x.i)).join('')}</div></details>`:''}<div class="note">今晚：${esc(d.stay)}。时间段是参考，不是必须完成的打卡表。</div>`}
+function go(id,initial=false){current=id;document.querySelectorAll('[data-tab]').forEach(b=>{b.classList.toggle('active',+b.dataset.tab===id);b.setAttribute('aria-current',+b.dataset.tab===id?'page':'false')});const panel=document.getElementById('content');panel.innerHTML=id===0?overviewContent():renderDay(DAYS.find(d=>d.id===id));panel.scrollTop=0;showDay(id);try{history.replaceState(null,'',id?'#day-'+id:'#overview')}catch(e){};const t=document.querySelector('[data-tab="'+id+'"]');if(t&&!initial)t.scrollIntoView({block:'nearest',inline:'nearest'});}
+function initMap(){if(!window.L){document.getElementById('fallbackText').textContent='地图暂未加载，先看区域示意。下方行程和地点导航可正常使用。';return}map=L.map('map',{zoomControl:false,scrollWheelZoom:false}).setView([22.76,113.4],9);L.control.zoom({position:'topright'}).addTo(map);let loaded=false;const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);tiles.on('tileload',()=>{loaded=true;document.getElementById('mapFallback').style.display='none'});tiles.on('tileerror',()=>{if(!loaded){document.getElementById('fallbackText').textContent='底图暂时无法加载，点位和导航仍可使用。'}});showDay(current);}
+function showDay(id){document.getElementById('mapTitle').textContent=id?DAYS.find(d=>d.id===id).short:'五天，一条岭南环线';document.getElementById('mapSubtitle').textContent=id?'实心为主线 · 空心为备选 · 点击查看地点':'点击日期，查看当天地点';if(!map)return;layers.forEach(l=>map.removeLayer(l));layers=[];selectedMarker.clear();if(id===0){const cities=[['广州',23.119,113.32],['顺德',22.84,113.25],['珠海',22.27,113.59],['澳门',22.18,113.55]];cities.forEach(c=>{layers.push(L.marker([c[1],c[2]],{icon:L.divIcon({className:'',html:`<div class="overview-pin">${c[0]}</div>`,iconSize:[62,34],iconAnchor:[31,17]})}).addTo(map))});layers.push(L.polyline([[23.119,113.32],[22.18,113.55],[22.27,113.59],[22.84,113.25],[23.119,113.32]],{color:'#5b8965',weight:2,dashArray:'5 7',opacity:.6}).addTo(map));map.fitBounds(cities.map(c=>[c[1],c[2]]),{padding:[65,65]});return}const d=DAYS.find(x=>x.id===id),pts=[];let num=0;d.locations.forEach((l,i)=>{let m;if(l.optional){m=L.circleMarker([l.lat,l.lng],{color:d.color,fillColor:'#fff',fillOpacity:1,radius:6,weight:2}).addTo(map)}else{num++;m=L.marker([l.lat,l.lng],{icon:L.divIcon({className:'',html:`<div class="number-pin" style="--pin:${d.color}">${num}</div>`,iconSize:[27,27],iconAnchor:[13,13]})}).addTo(map);pts.push([l.lat,l.lng])}m.bindPopup(`<b>${esc(l.name)}</b><br>${esc(l.time)}<br><a href="${navUrl(l,d.city)}" target="_blank" rel="noopener">按名称打开高德 ↗</a>`);m.on('click',()=>{document.querySelectorAll('.stop.focused').forEach(e=>e.classList.remove('focused'));const el=document.getElementById('stop-'+key(id,i));if(el){const det=el.closest('.optional-list');if(det)det.open=true;el.classList.add('focused')}});selectedMarker.set(i,m);layers.push(m)});if(pts.length>1)layers.push(L.polyline(pts,{color:d.color,weight:2,dashArray:'5 6',opacity:.55}).addTo(map));map.fitBounds(pts,{padding:[60,70],maxZoom:14});}
+document.getElementById('tabs').innerHTML=[{id:0,label:'总览'},...DAYS.map(d=>({id:d.id,label:'D'+d.id+' · '+d.date}))].map(d=>`<button class="tab ${d.id===0?'active':''}" data-tab="${d.id}">${d.label}</button>`).join('');
+document.addEventListener('click',e=>{const tab=e.target.closest('[data-tab],[data-day]');if(tab){go(+(tab.dataset.tab??tab.dataset.day));return}const chk=e.target.closest('[data-check]');if(chk){const k=chk.dataset.check;visited[k]=!visited[k];try{localStorage.setItem('lingnan-2026-visited',JSON.stringify(visited))}catch(e){}const article=chk.closest('.stop');article.classList.toggle('done',visited[k]);chk.setAttribute('aria-pressed',String(visited[k]));chk.setAttribute('aria-label',visited[k]?'标记为未去':'标记为已去');chk.textContent=visited[k]?'✓':'○';return}const locate=e.target.closest('[data-locate]');if(locate){const i=+locate.dataset.locate,m=selectedMarker.get(i);if(m){map.setView(m.getLatLng(),15);m.openPopup()}document.querySelector('.map-pane').scrollIntoView({behavior:'smooth',block:'start'});return}if(e.target.closest('#backToMap'))document.querySelector('.map-pane').scrollIntoView({behavior:'smooth',block:'start'})});
+const hash=location.hash.match(/^#day-([1-5])$/);go(hash?+hash[1]:0,true);initMap();
+</script>
+</body></html>
