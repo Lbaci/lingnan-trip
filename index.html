@@ -317,22 +317,24 @@ const AMAP_BACKEND='https://lingnan-five-days-nov18.isdazhen.chatgpt.site';
 const amapCoords=new Map(),amapPending=new Set();
 let amapRaw=null,amapInfo=null,amapSearch=null,amapLoading=false,amapActiveSearches=0;
 const amapQueue=[];
-let savedAmapCoords={};try{savedAmapCoords=JSON.parse(localStorage.getItem('lingnan-amap-poi-v1')||'{}')}catch{}
+let savedAmapCoords={};try{savedAmapCoords=JSON.parse(localStorage.getItem('lingnan-amap-poi-v2')||'{}')}catch{}
 Object.entries(savedAmapCoords).forEach(([k,v])=>{if(v&&v.time>Date.now()-7*86400000&&Array.isArray(v.pos)&&v.pos.length===2&&v.pos.every(Number.isFinite))amapCoords.set(k,v)});
 function mapPlaceKey(l){return (l.query||l.name+' '+(l.city||'')).trim()}
 function mapMessage(text){const el=document.getElementById('amapStatus');if(el)el.textContent=text}
 function mapResolveName(l){const names={'广州塔江边':'广州塔','大良早茶 · 区域参考':'华盖路步行街','日月贝 · 珠海大剧院':'珠海大剧院','珠江夜游':'天字码头','爱情邮局灯塔':'爱情邮局','广州塔有轨电车站':'广州塔站(有轨电车站)'};return names[l.name]||l.name}
 function mapPoint(l){return amapCoords.get(mapPlaceKey(l))?.pos||[l.lng,l.lat]}
-function persistMapCache(){try{localStorage.setItem('lingnan-amap-poi-v1',JSON.stringify(Object.fromEntries(amapCoords)))}catch{}}
+function persistMapCache(){try{localStorage.setItem('lingnan-amap-poi-v2',JSON.stringify(Object.fromEntries(amapCoords)))}catch{}}
+function mapSearchCity(l){return {'佛山顺德':'佛山市','顺德':'佛山市','广州':'广州市','珠海':'珠海市'}[l.city]||l.city||''}
+function nearbyAmapPoi(p,l){if(!p?.location)return false;const dx=(p.location.lng-l.lng)*111*Math.cos(l.lat*Math.PI/180),dy=(p.location.lat-l.lat)*111;return Math.hypot(dx,dy)<20}
 function startPlaceSearch(l){
  const k=mapPlaceKey(l);if(amapCoords.has(k)||amapPending.has(k)||!amapSearch)return;
  amapPending.add(k);amapQueue.push({l,k});drainPlaceSearch();
 }
 function drainPlaceSearch(){
  while(amapActiveSearches<2&&amapQueue.length){const {l,k}=amapQueue.shift();amapActiveSearches++;
-  const search=new AMap.PlaceSearch({city:l.city||'',citylimit:true,pageSize:5,pageIndex:1,extensions:'base'});
+  const search=new AMap.PlaceSearch({city:mapSearchCity(l),citylimit:true,pageSize:5,pageIndex:1,extensions:'base'});
   let finished=false;const finish=(status,result)=>{if(finished)return;finished=true;clearTimeout(timer);amapActiveSearches--;
-   const pois=result?.poiList?.pois||[];
+   const pois=(result?.poiList?.pois||[]).filter(p=>nearbyAmapPoi(p,l));
    if(status==='complete'&&pois.length){const normalize=s=>String(s).replace(/[\s·•（）()]/g,'');const target=normalize(mapResolveName(l));const match=pois.find(p=>normalize(p.name)===target)||pois.find(p=>normalize(p.name).includes(target)&&!/(停车场|洗手间|售票处|充电站)/.test(p.name))||pois[0];
     if(match?.location){const pos=[match.location.lng,match.location.lat];if(pos.every(Number.isFinite)){amapCoords.set(k,{pos,name:match.name,poiId:match.id||'',time:Date.now()});persistMapCache();showDay(current,false)}}
    }
